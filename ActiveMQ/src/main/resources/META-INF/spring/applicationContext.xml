@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:int-xml="http://www.springframework.org/schema/integration/xml"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+    xmlns:jms="http://www.springframework.org/schema/jms" 
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+			http://www.springframework.org/schema/beans/spring-beans.xsd
+			http://www.springframework.org/schema/context  
+    		http://www.springframework.org/schema/context/spring-context.xsd  
+			http://www.springframework.org/schema/integration
+			http://www.springframework.org/schema/integration/spring-integration.xsd
+			http://www.springframework.org/schema/integration/xml
+			http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
+			http://www.springframework.org/schema/jms 
+			http://www.springframework.org/schema/jms/spring-jms.xsd
+			http://www.springframework.org/schema/integration/jms
+			http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+			http://www.springframework.org/schema/util
+			http://www.springframework.org/schema/util/spring-util.xsd"
+>
+
+
+ <import resource="jms-listener-container-config.xml"/>
+
+
+<int:channel id="inbound"/>
+<int:channel id="outbound"/>
+<int:channel id="input-channel"/>
+<int:channel id="output-channel"/>
+
+<!-- JMS Message Driven Channel Adapter -->
+<int-jms:message-driven-channel-adapter id="jmsIn" 
+                                        channel="inbound" 
+                                        container="messageListenerContainer" 
+                                        acknowledge="transacted"/>
+    
+<int-jms:outbound-channel-adapter id="jmsOut" 
+                                  channel="outbound"
+                                  connection-factory="jmsFactory" 
+                                  destination="receiveQueue" 
+                                  delivery-persistent="true" />
+
+<int:service-activator  input-channel="output-channel"
+                        output-channel="outbound" 
+                        ref="messageHandler"
+                        method="receiveMessage" 
+                        requires-reply="true"/>
+
+
+<!--  JAXB Marshalling transformer to generate object from XML -->    
+<int-xml:unmarshalling-transformer id="marshallMessage" unmarshaller="xmlUnMarshaller" 
+    							input-channel="inbound"
+    							output-channel="output-channel" />     
+    							
+ 
+ 
+ <bean id="xmlUnMarshaller" name="xmlUnMarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+    <property name="classesToBeBound">
+        <list value-type="java.lang.Class">
+            <value>com.acme.model.jaxb.FlightInfo</value>
+        </list>
+    </property>   
+</bean>   							
+
+<bean id="messageHandler" class="com.acme.message.handler.MessageHandler"></bean>
+           
+</beans>
